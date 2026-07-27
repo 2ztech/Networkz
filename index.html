@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Networkz — Aruba & HPE Switch Command Reference</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --sidebar-bg: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent-dim: #1f6feb;
+    --cmd-bg: #0f1117;
+    --cmd-text: #7ee787;
+    --cmd-text-cx: #f2cc60;
+    --cmd-text-hpe: #d2a8ff;
+    --step-num: #58a6ff;
+    --danger: #f85149;
+    --warn: #d2991d;
+    --radius: 6px;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-y: auto;
+  }
+
+  .sidebar {
+    position: fixed; top: 0; left: 0; width: 270px; height: 100vh;
+    background: var(--sidebar-bg); border-right: 1px solid var(--border);
+    padding: 24px 0; display: flex; flex-direction: column; overflow-y: auto; z-index: 10;
+  }
+
+  .sidebar-header { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .sidebar-header h1 { font-size: 1.4rem; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
+  .sidebar-header .brand { color: var(--accent); }
+  .sidebar-header .sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+  .os-toggle-wrap { padding: 0 20px 16px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .os-toggle-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 8px; }
+  .os-toggle { display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .os-option {
+    flex: 1; text-align: center; padding: 6px 2px; font-size: 0.67rem; font-weight: 600;
+    cursor: pointer; border: none; background: none; color: var(--text-muted);
+    font-family: var(--font-sans); transition: all 0.15s; white-space: nowrap;
+  }
+  .os-option.active { background: var(--accent-dim); color: #fff; }
+  .os-option:hover:not(.active) { color: var(--text); }
+  .os-option[data-os="s"].active { background: #1a7f37; }
+  .os-option[data-os="cx"].active { background: #9a6e03; }
+  .os-option[data-os="hpe"].active { background: #6e3fa0; }
+
+  .os-badge {
+    display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 1px 6px;
+    border-radius: 3px; text-transform: uppercase; flex-shrink: 0; letter-spacing: 0.3px;
+  }
+  .os-badge.s { background: rgba(126,231,135,0.15); color: var(--cmd-text); }
+  .os-badge.cx { background: rgba(242,204,96,0.15); color: var(--cmd-text-cx); }
+  .os-badge.hpe { background: rgba(210,168,255,0.15); color: var(--cmd-text-hpe); }
+
+  .sidebar nav { flex: 1; padding: 0 8px; }
+  .nav-section { margin-bottom: 2px; }
+  .nav-section-title {
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted);
+    padding: 8px 12px 4px; font-weight: 600;
+  }
+  .nav-topic {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--radius);
+    cursor: pointer; font-size: 0.88rem; color: var(--text); text-decoration: none;
+    transition: background 0.15s; border: none; background: none; width: 100%;
+    text-align: left; font-family: var(--font-sans); position: relative;
+  }
+  .nav-topic:hover { background: rgba(88,166,255,0.08); }
+  .nav-topic.active { background: rgba(88,166,255,0.14); color: var(--accent); font-weight: 500; }
+  .nav-topic .icon { font-size: 1.1rem; width: 20px; text-align: center; flex-shrink: 0; }
+  .nav-topic .arrow { margin-left: auto; font-size: 0.7rem; color: var(--text-muted); transition: transform 0.2s; }
+  .nav-topic.expanded .arrow { transform: rotate(90deg); }
+
+  .nav-subtopics { overflow: hidden; max-height: 0; transition: max-height 0.25s ease; }
+  .nav-topic.expanded + .nav-subtopics { max-height: 600px; }
+
+  .nav-subtopic {
+    display: block; padding: 5px 12px 5px 42px; font-size: 0.8rem; color: var(--text-muted);
+    cursor: pointer; border: none; background: none; width: 100%; text-align: left;
+    font-family: var(--font-sans); border-radius: var(--radius); transition: all 0.15s;
+  }
+  .nav-subtopic:hover { color: var(--text); background: rgba(88,166,255,0.05); }
+  .nav-subtopic.active { color: var(--accent); }
+
+  .sidebar-footer {
+    padding: 16px 20px 0; border-top: 1px solid var(--border); margin-top: 12px;
+    font-size: 0.7rem; color: var(--text-muted);
+  }
+
+  .search-wrap { padding: 0 8px; margin-bottom: 10px; }
+  .search-input {
+    width: 100%; padding: 7px 12px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text); font-size: 0.82rem; font-family: var(--font-sans);
+    outline: none; transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--accent-dim); }
+  .search-input::placeholder { color: var(--text-muted); }
+
+  .main { margin-left: 270px; padding: 40px 48px 80px; max-width: 960px; min-height: 100vh; }
+
+  .guide-header { margin-bottom: 32px; }
+  .guide-header h2 { font-size: 1.8rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .guide-header .desc { color: var(--text-muted); font-size: 0.95rem; }
+
+  .subtopic { margin-bottom: 32px; }
+  .subtopic-heading { font-size: 1.15rem; font-weight: 600; color: #e6edf3; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+  .step {
+    border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px;
+    overflow: hidden; background: var(--sidebar-bg); transition: border-color 0.2s;
+  }
+  .step:hover { border-color: var(--accent-dim); }
+
+  .step-header {
+    display: flex; align-items: flex-start; gap: 14px; padding: 12px 16px; border-bottom: 1px solid var(--border);
+  }
+  .step-num {
+    background: var(--accent-dim); color: #fff; font-size: 0.7rem; font-weight: 700;
+    width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0; margin-top: 1px;
+  }
+  .step-info { flex: 1; }
+  .step-info .step-action { font-weight: 600; font-size: 0.9rem; color: #e6edf3; }
+  .step-info .step-note { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+
+  .step-cmd {
+    background: var(--cmd-bg); padding: 10px 16px; display: flex; align-items: center; gap: 10px;
+  }
+  .step-cmd .prompt { color: var(--text-muted); font-family: var(--font-mono); font-size: 0.82rem; user-select: none; white-space: nowrap; }
+  .step-cmd code { font-family: var(--font-mono); font-size: 0.87rem; word-break: break-all; flex: 1; }
+  .step-cmd code.s { color: var(--cmd-text); }
+  .step-cmd code.cx { color: var(--cmd-text-cx); }
+  .step-cmd code.hpe { color: var(--cmd-text-hpe); }
+
+  .step-cmd .copy-btn {
+    margin-left: auto; background: none; border: 1px solid var(--border); color: var(--text-muted);
+    padding: 3px 10px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;
+    font-family: var(--font-sans); flex-shrink: 0; transition: all 0.15s; white-space: nowrap;
+  }
+  .step-cmd .copy-btn:hover { color: var(--accent); border-color: var(--accent-dim); }
+  .step-cmd .copy-btn.copied { color: var(--cmd-text); border-color: var(--cmd-text); }
+
+  .callout {
+    border-left: 3px solid var(--accent-dim); background: rgba(88,166,255,0.06);
+    padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0; margin: 16px 0 24px;
+    font-size: 0.85rem; color: var(--text);
+  }
+  .callout.warn { border-color: var(--warn); background: rgba(210,153,29,0.06); }
+  .callout.danger { border-color: var(--danger); background: rgba(248,81,73,0.06); }
+
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 60vh; text-align: center; color: var(--text-muted);
+  }
+  .empty-state .icon { font-size: 3rem; margin-bottom: 16px; }
+  .empty-state h3 { font-size: 1.2rem; color: var(--text); margin-bottom: 8px; }
+  .empty-state p { font-size: 0.9rem; max-width: 360px; }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 768px) {
+    .sidebar { position: relative; width: 100%; height: auto; }
+    .main { margin-left: 0; padding: 24px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h1><span class="brand">Networkz</span></h1>
+    <div class="sub">Aruba &amp; HPE Switch Command Guide</div>
+  </div>
+
+  <div class="os-toggle-wrap">
+    <div class="os-toggle-label">Operating System</div>
+    <div class="os-toggle">
+      <button class="os-option active" data-os="s">AOS&#8209;S</button>
+      <button class="os-option" data-os="cx">AOS&#8209;CX</button>
+      <button class="os-option" data-os="hpe">HPE</button>
+    </div>
+  </div>
+
+  <div class="search-wrap">
+    <input type="text" class="search-input" id="search" placeholder="Search commands..." autocomplete="off">
+  </div>
+
+  <nav id="nav"></nav>
+
+  <div class="sidebar-footer">Press <kbd style="background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-size:0.65rem;">/</kbd> to search</div>
+</aside>
+
+<main class="main" id="main">
+  <div class="empty-state" id="empty">
+    <div class="icon">\u26A1</div>
+    <h3>Select a topic to begin</h3>
+    <p>Choose a configuration guide from the sidebar, or use the search bar to find specific commands.</p>
+  </div>
+  <div id="content" class="hidden"></div>
+</main>
+
+<script>
+let currentOS = 's';
+
+const guides = [
+  {
+    id: 'system-basics', icon: '\u2699', section: 'Core Configuration', title: 'System Basics',
+    desc: 'Essential system commands: entering configuration mode, saving config, viewing system info, and managing users.',
+    subtopics: [
+      {
+        id: 'enter-exit', heading: 'Entering & Exiting Configuration', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view', note: 'AOS-S/HPE: prompt changes from &lt;Switch&gt; to [Switch]. AOS-CX: uses "configure terminal" (or "conf t").' },
+          { action: 'Return to previous level', s: 'quit', cx: 'exit', hpe: 'quit', note: 'AOS-CX: "exit" goes up one level, "end" goes to top.' },
+          { action: 'Return to privileged exec immediately', s: 'return', cx: 'end', hpe: 'return', note: 'Returns to the top level from anywhere. Ctrl+Z also works in AOS-CX/HPE.' },
+        ]
+      },
+      {
+        id: 'hostname', heading: 'Hostname & Banner', steps: [
+          { action: 'Set device hostname', s: 'sysname CoreSwitch', cx: 'hostname CoreSwitch', hpe: 'sysname CoreSwitch', note: 'AOS-S/HPE: "sysname". AOS-CX: "hostname".' },
+          { action: 'Set login banner (MOTD)', s: 'header login %Unauthorized access prohibited%', cx: 'banner motd ^Unauthorized access prohibited^', hpe: 'header login %Unauthorized access prohibited%', note: 'Delimiter character (% or ^) marks start and end of banner text.' },
+        ]
+      },
+      {
+        id: 'saving', heading: 'Saving & Managing Config', steps: [
+          { action: 'Save running configuration', s: 'save force', cx: 'write memory', hpe: 'save force', note: 'AOS-S/HPE: "save force" skips confirmation. AOS-CX: "write memory" or "copy running-config startup-config".' },
+          { action: 'Save with confirmation', s: 'save', cx: 'copy running-config startup-config', hpe: 'save' },
+          { action: 'Show running configuration', s: 'display current-configuration', cx: 'show running-config', hpe: 'display current-configuration', note: 'Append "| include &lt;term&gt;" to filter output on all OS.' },
+          { action: 'Show saved/startup configuration', s: 'display saved-configuration', cx: 'show startup-config', hpe: 'display saved-configuration' },
+          { action: 'Reset to factory defaults', s: 'reset saved-configuration\nreboot\nN', cx: 'erase startup-config\nboot system', hpe: 'reset saved-configuration\nreboot\nN', note: 'AOS-S/HPE: reset saved-config, reboot and choose NOT to save. AOS-CX: erase then reboot.' },
+        ]
+      },
+      {
+        id: 'sysinfo', heading: 'System Information', steps: [
+          { action: 'Show system version and uptime', s: 'display version', cx: 'show version', hpe: 'display version' },
+          { action: 'Show interface status summary', s: 'display interface brief', cx: 'show interface brief', hpe: 'display interface brief' },
+          { action: 'Show detailed interface info', s: 'display interface gigabitethernet 1/0/1', cx: 'show interface 1/1/1', hpe: 'display interface gigabitethernet 1/0/1', note: 'Interface naming: AOS-S/HPE use gigabitethernet 1/0/1. AOS-CX uses 1/1/1.' },
+          { action: 'Show device hardware health', s: 'display device', cx: 'show environment', hpe: 'display environment', note: 'Temperature, fan status, PSU status. HPE Comware 7 uses "display environment".' },
+        ]
+      },
+      {
+        id: 'user-mgmt', heading: 'User Management (Password Manager)', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Create local user', s: 'local-user admin class manage', cx: 'user admin password', hpe: 'local-user admin class manage', note: 'AOS-S/HPE: user creation and password are separate steps. AOS-CX: password set during creation.' },
+          { action: 'Set user password (plaintext)', s: 'password simple MySecurePass123', cx: 'user admin password plaintext MySecurePass123', hpe: 'password simple MySecurePass123', note: 'AOS-S/HPE: "password simple" after user creation. AOS-CX: combined. Use "hash" instead of "simple"/"plaintext" for pre-hashed passwords.' },
+          { action: 'Set user password (hashed)', s: 'password hash $1$abc123...', cx: 'user admin password ciphertext $1$abc123...', hpe: 'password hash $1$abc123...' },
+          { action: 'Set service type', s: 'service-type ssh telnet terminal', cx: null, hpe: 'service-type ssh telnet terminal', note: 'AOS-S/HPE only. Restricts which access methods this user can use.' },
+          { action: 'Assign user privilege level', s: 'authorization-attribute user-role network-admin', cx: 'user admin group administrators', hpe: 'authorization-attribute user-role network-admin', note: 'AOS-S/HPE: "user-role network-admin" (full access) or "network-operator" (read-only). AOS-CX: "group administrators" or "group operators".' },
+          { action: 'Change existing user password', s: 'local-user admin\npassword simple NewPass456', cx: 'user admin password plaintext NewPass456', hpe: 'local-user admin\npassword simple NewPass456', note: 'Enter user view first, then set new password.' },
+          { action: 'Delete a local user', s: 'undo local-user admin', cx: 'no user admin', hpe: 'undo local-user admin' },
+          { action: 'List all local users', s: 'display local-user', cx: 'show user', hpe: 'display local-user' },
+          { action: 'Set password policy (complexity)', s: 'password-control enable\npassword-control length 8\npassword-control composition type-number 3', cx: null, hpe: 'password-control enable\npassword-control length 8\npassword-control composition type-number 3', note: 'AOS-S/HPE: enables minimum length (8), requires 3 of 4 character types (upper, lower, digit, special).' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'ip-addressing', icon: '\u25CE', section: 'Core Configuration', title: 'IP Addressing',
+    desc: 'Assign IP addresses to VLAN interfaces and physical ports.',
+    callout: { type: 'info', text: 'On Aruba/HPE switches, IP addresses are assigned under VLAN interfaces (SVIs), not physical interfaces. Layer 3 routing requires a VLAN interface with an IP address.' },
+    subtopics: [
+      {
+        id: 'vlan-ip', heading: 'VLAN Interface IP (Most Common)', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Create VLAN first', s: 'vlan 10', cx: 'vlan 10', hpe: 'vlan 10', note: 'Same on all OS. Creates VLAN 10.' },
+          { action: 'Enter VLAN interface view', s: 'interface vlan-interface 10', cx: 'interface vlan 10', hpe: 'interface vlan-interface 10', note: 'AOS-S/HPE: "vlan-interface 10". AOS-CX: "vlan 10".' },
+          { action: 'Assign IP address', s: 'ip address 192.168.10.1 255.255.255.0', cx: 'ip address 192.168.10.1/24', hpe: 'ip address 192.168.10.1 255.255.255.0', note: 'AOS-CX supports prefix-length notation (e.g. /24). AOS-S/HPE use full subnet mask.' },
+          { action: 'Enable the interface', s: 'undo shutdown', cx: 'no shutdown', hpe: 'undo shutdown', note: 'AOS-S/HPE use "undo" to negate. AOS-CX uses "no".' },
+          { action: 'Verify IP interfaces', s: 'display ip interface brief', cx: 'show ip interface brief', hpe: 'display ip interface brief' },
+        ]
+      },
+      {
+        id: 'l3-port', heading: 'Assign IP to Physical Port (Layer 3 Mode)', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Enter interface view', s: 'interface gigabitethernet 1/0/1', cx: 'interface 1/1/1', hpe: 'interface gigabitethernet 1/0/1' },
+          { action: 'Switch port to Layer 3 mode', s: 'port link-mode route', cx: 'no switchport\nrouting', hpe: 'port link-mode route', note: 'AOS-S/HPE: "port link-mode route". AOS-CX: "no switchport" then "routing".' },
+          { action: 'Assign IP address (point-to-point)', s: 'ip address 10.0.0.1 255.255.255.252', cx: 'ip address 10.0.0.1/30', hpe: 'ip address 10.0.0.1 255.255.255.252', note: 'Common for /30 point-to-point links between switches/routers.' },
+        ]
+      },
+      {
+        id: 'verify-ip', heading: 'Viewing IP Configuration', steps: [
+          { action: 'Show all IP interfaces', s: 'display ip interface brief', cx: 'show ip interface brief', hpe: 'display ip interface brief' },
+          { action: 'Show specific interface details', s: 'display interface vlan-interface 10', cx: 'show interface vlan 10', hpe: 'display interface vlan-interface 10' },
+          { action: 'Show ARP table', s: 'display arp', cx: 'show arp', hpe: 'display arp', note: 'See which MAC addresses have been learned on each interface.' },
+          { action: 'Clear ARP cache', s: 'reset arp dynamic', cx: 'clear arp', hpe: 'reset arp dynamic' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'vlan', icon: '\u21C5', section: 'Core Configuration', title: 'VLAN Configuration',
+    desc: 'Create VLANs, assign access ports, and configure trunk ports.',
+    subtopics: [
+      {
+        id: 'create-vlan', heading: 'Creating VLANs', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Create a single VLAN', s: 'vlan 10', cx: 'vlan 10', hpe: 'vlan 10', note: 'Same on all OS.' },
+          { action: 'Name the VLAN', s: 'name Sales', cx: 'name Sales', hpe: 'name Sales', note: 'Same on all OS. Add a description for clarity.' },
+          { action: 'Create a range of VLANs', s: 'vlan 10 to 20', cx: 'vlan 10-20', hpe: 'vlan 10 to 20', note: 'AOS-S/HPE: "vlan 10 to 20". AOS-CX: "vlan 10-20".' },
+          { action: 'Verify VLANs exist', s: 'display vlan brief', cx: 'show vlan brief', hpe: 'display vlan brief' },
+        ]
+      },
+      {
+        id: 'access-port', heading: 'Access Ports (End Devices)', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Enter interface view', s: 'interface gigabitethernet 1/0/10', cx: 'interface 1/1/10', hpe: 'interface gigabitethernet 1/0/10' },
+          { action: 'Set port to access mode', s: 'port link-type access', cx: 'switchport mode access', hpe: 'port link-type access', note: 'AOS-S/HPE: "port link-type access". AOS-CX: "switchport mode access".' },
+          { action: 'Assign to a VLAN', s: 'port access vlan 10', cx: 'switchport access vlan 10', hpe: 'port access vlan 10' },
+          { action: 'Enable STP edge port', s: 'stp edged-port', cx: 'spanning-tree port-type edge', hpe: 'stp edged-port', note: 'Skips STP learning states. Good for end devices.' },
+          { action: 'Verify port VLAN membership', s: 'display vlan 10', cx: 'show vlan 10', hpe: 'display vlan 10' },
+        ]
+      },
+      {
+        id: 'trunk-port', heading: 'Trunk Ports (Switch-to-Switch)', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Enter interface view', s: 'interface gigabitethernet 1/0/24', cx: 'interface 1/1/24', hpe: 'interface gigabitethernet 1/0/24' },
+          { action: 'Set port to trunk mode', s: 'port link-type trunk', cx: 'switchport mode trunk', hpe: 'port link-type trunk', note: 'Trunk ports carry multiple VLANs using 802.1Q tagging.' },
+          { action: 'Allow specific VLANs on trunk', s: 'port trunk permit vlan 10 20 30', cx: 'switchport trunk allowed vlan 10,20,30', hpe: 'port trunk permit vlan 10 20 30' },
+          { action: 'Allow all VLANs on trunk', s: 'port trunk permit vlan all', cx: 'switchport trunk allowed vlan all', hpe: 'port trunk permit vlan all' },
+          { action: 'Set native/PVID VLAN', s: 'port trunk pvid vlan 1', cx: 'switchport trunk native vlan 1', hpe: 'port trunk pvid vlan 1' },
+          { action: 'Verify trunk configuration', s: 'display interface gigabitethernet 1/0/24', cx: 'show interface 1/1/24', hpe: 'display interface gigabitethernet 1/0/24' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'inter-vlan', icon: '\u21C4', section: 'Core Configuration', title: 'Inter-VLAN Routing',
+    desc: 'Enable routing between VLANs using SVI (Switch Virtual Interface) or subinterfaces.',
+    callout: { type: 'info', text: 'Two methods exist: 1) SVI-based routing (VLAN interfaces with IP routing enabled), and 2) Subinterface/dot1q routing (router-on-a-stick using a routed port).' },
+    subtopics: [
+      {
+        id: 'svi-routing', heading: 'Method 1: SVI-Based (VLAN Interfaces)', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Enable IP routing', s: 'ip routing', cx: 'ip routing', hpe: 'ip routing', note: 'Enables Layer 3 routing. Same on all OS.' },
+          { action: 'Create VLAN interface for VLAN 10', s: 'interface vlan-interface 10', cx: 'interface vlan 10', hpe: 'interface vlan-interface 10' },
+          { action: 'Assign IP for VLAN 10 (gateway)', s: 'ip address 192.168.10.1 255.255.255.0', cx: 'ip address 192.168.10.1/24', hpe: 'ip address 192.168.10.1 255.255.255.0' },
+          { action: 'Create VLAN interface for VLAN 20', s: 'interface vlan-interface 20', cx: 'interface vlan 20', hpe: 'interface vlan-interface 20' },
+          { action: 'Assign IP for VLAN 20 (gateway)', s: 'ip address 192.168.20.1 255.255.255.0', cx: 'ip address 192.168.20.1/24', hpe: 'ip address 192.168.20.1 255.255.255.0' },
+          { action: 'Verify routing table', s: 'display ip routing-table', cx: 'show ip route', hpe: 'display ip routing-table', note: 'You should see connected routes for both VLANs. VLAN 10 and VLAN 20 devices can now communicate.' },
+        ]
+      },
+      {
+        id: 'subif-routing', heading: 'Method 2: Subinterface / Dot1Q (Router-on-a-Stick)', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Enable IP routing', s: 'ip routing', cx: 'ip routing', hpe: 'ip routing' },
+          { action: 'Enter physical interface (Layer 3 port)', s: 'interface gigabitethernet 1/0/1', cx: 'interface 1/1/1', hpe: 'interface gigabitethernet 1/0/1', note: 'This port connects to another switch via trunk.' },
+          { action: 'Set port to Layer 3 mode', s: 'port link-mode route', cx: 'no switchport', hpe: 'port link-mode route', note: 'Must be a routed port before creating subinterfaces.' },
+          { action: 'Exit and create subinterface for VLAN 10', s: 'quit\ninterface gigabitethernet 1/0/1.10', cx: 'interface 1/1/1.10', hpe: 'interface gigabitethernet 1/0/1.10', note: 'Creates subinterface .10 bound to VLAN 10.' },
+          { action: 'Encapsulate dot1Q VLAN 10', s: 'vlan-type dot1q vid 10', cx: 'encapsulation dot1q 10', hpe: 'vlan-type dot1q vid 10', note: 'AOS-S/HPE: "vlan-type dot1q vid". AOS-CX: "encapsulation dot1q". Binds subinterface to VLAN 10.' },
+          { action: 'Assign IP for VLAN 10 (gateway)', s: 'ip address 192.168.10.254 255.255.255.0', cx: 'ip address 192.168.10.254/24', hpe: 'ip address 192.168.10.254 255.255.255.0', note: 'This IP becomes the default gateway for devices in VLAN 10.' },
+          { action: 'Create subinterface for VLAN 20', s: 'interface gigabitethernet 1/0/1.20', cx: 'interface 1/1/1.20', hpe: 'interface gigabitethernet 1/0/1.20' },
+          { action: 'Encapsulate dot1Q VLAN 20', s: 'vlan-type dot1q vid 20', cx: 'encapsulation dot1q 20', hpe: 'vlan-type dot1q vid 20' },
+          { action: 'Assign IP for VLAN 20 (gateway)', s: 'ip address 192.168.20.254 255.255.255.0', cx: 'ip address 192.168.20.254/24', hpe: 'ip address 192.168.20.254 255.255.255.0' },
+          { action: 'Verify routing works', s: 'display ip routing-table', cx: 'show ip route', hpe: 'display ip routing-table\nping 192.168.20.1', note: 'Both connected routes should appear. VLAN 10 devices (using 192.168.10.254) can now reach VLAN 20 devices.' },
+        ]
+      },
+      {
+        id: 'verify-routing', heading: 'Verification', steps: [
+          { action: 'Check IP routing is enabled', s: 'display ip routing-table', cx: 'show ip route', hpe: 'display ip routing-table' },
+          { action: 'Ping between VLANs from switch', s: 'ping 192.168.20.1', cx: 'ping 192.168.20.1', hpe: 'ping 192.168.20.1' },
+          { action: 'Show VLAN interface status', s: 'display interface vlan-interface brief', cx: 'show interface vlan brief', hpe: 'display interface vlan-interface brief' },
+          { action: 'Traceroute across VLANs', s: 'tracert 192.168.20.1', cx: 'traceroute 192.168.20.1', hpe: 'tracert 192.168.20.1', note: 'Verifies the path taken between VLANs.' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'ip-routing', icon: '\u2197', section: 'Core Configuration', title: 'IP Routing',
+    desc: 'Configure static routes and default routes for traffic forwarding between networks.',
+    callout: { type: 'info', text: 'IP routing must be enabled with "ip routing" before the switch will forward traffic between networks.' },
+    subtopics: [
+      {
+        id: 'static-routes', heading: 'Static Routes', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Enable IP routing', s: 'ip routing', cx: 'ip routing', hpe: 'ip routing' },
+          { action: 'Add a static route', s: 'ip route-static 10.10.10.0 255.255.255.0 192.168.1.254', cx: 'ip route 10.10.10.0/24 192.168.1.254', hpe: 'ip route-static 10.10.10.0 255.255.255.0 192.168.1.254', note: 'AOS-S/HPE: "ip route-static &lt;net&gt; &lt;mask&gt; &lt;next-hop&gt;". AOS-CX: "ip route &lt;net&gt;/&lt;prefix&gt; &lt;next-hop&gt;".' },
+          { action: 'Add route via exit interface', s: 'ip route-static 10.10.10.0 24 gigabitethernet 1/0/24', cx: 'ip route 10.10.10.0/24 1/1/24', hpe: 'ip route-static 10.10.10.0 24 gigabitethernet 1/0/24' },
+          { action: 'View routing table', s: 'display ip routing-table', cx: 'show ip route', hpe: 'display ip routing-table' },
+        ]
+      },
+      {
+        id: 'default-route', heading: 'Default Route', steps: [
+          { action: 'Add default route (0.0.0.0/0)', s: 'ip route-static 0.0.0.0 0.0.0.0 192.168.1.254', cx: 'ip route 0.0.0.0/0 192.168.1.254', hpe: 'ip route-static 0.0.0.0 0.0.0.0 192.168.1.254', note: 'Gateway of last resort.' },
+          { action: 'Add default route with admin distance', s: 'ip route-static 0.0.0.0 0.0.0.0 192.168.1.254 preference 60', cx: 'ip route 0.0.0.0/0 192.168.1.254 60', hpe: 'ip route-static 0.0.0.0 0.0.0.0 192.168.1.254 preference 60', note: 'Lower = higher priority. Default: 60 (AOS-S/HPE), 1 (AOS-CX).' },
+        ]
+      },
+      {
+        id: 'delete-routes', heading: 'Deleting Routes', steps: [
+          { action: 'Delete specific static route', s: 'undo ip route-static 10.10.10.0 255.255.255.0 192.168.1.254', cx: 'no ip route 10.10.10.0/24 192.168.1.254', hpe: 'undo ip route-static 10.10.10.0 255.255.255.0 192.168.1.254' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'ssh', icon: '\u2325', section: 'Management Access', title: 'SSH Configuration',
+    desc: 'Enable secure remote management via SSH.',
+    callout: { type: 'warn', text: 'Always configure SSH before connecting a switch to an untrusted network. Telnet sends credentials in plain text.' },
+    subtopics: [
+      {
+        id: 'ssh-setup', heading: 'Full SSH Setup', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Generate RSA key pair', s: 'public-key local create rsa', cx: 'crypto key generate rsa', hpe: 'public-key local create rsa', note: 'Required for SSH. AOS-S/HPE: prompts for key length. AOS-CX: add "bits 2048".' },
+          { action: 'Enable SSH server', s: 'ssh server enable', cx: 'ssh server enable', hpe: 'ssh server enable', note: 'Same on all OS. Starts the SSH daemon.' },
+          { action: 'Force SSHv2 only', s: 'ssh server compatible-ssh1x disable', cx: 'ssh server v2-only', hpe: 'ssh server compatible-ssh1x disable' },
+          { action: 'Create local user', s: 'local-user admin class manage', cx: 'user admin password', hpe: 'local-user admin class manage' },
+          { action: 'Set user password', s: 'password simple MySecurePass123', cx: 'user admin password plaintext MySecurePass123', hpe: 'password simple MySecurePass123' },
+          { action: 'Set service type (AOS-S/HPE)', s: 'service-type ssh', cx: null, hpe: 'service-type ssh' },
+          { action: 'Assign privilege level', s: 'authorization-attribute user-role network-admin', cx: 'user admin group administrators', hpe: 'authorization-attribute user-role network-admin', note: 'network-admin / administrators = full access. network-operator / operators = read-only.' },
+          { action: 'Enter VTY lines (AOS-S/HPE)', s: 'user-interface vty 0 4', cx: null, hpe: 'user-interface vty 0 4', note: 'AOS-S/HPE: VTY lines 0-4 = 5 simultaneous SSH sessions.' },
+          { action: 'Set authentication mode', s: 'authentication-mode scheme', cx: null, hpe: 'authentication-mode scheme', note: 'AOS-S/HPE only. Uses local user database or RADIUS/TACACS.' },
+          { action: 'Restrict VTY to SSH only (AOS-S/HPE)', s: 'protocol inbound ssh', cx: null, hpe: 'protocol inbound ssh' },
+        ]
+      },
+      {
+        id: 'ssh-tuning', heading: 'SSH Monitoring & Tuning', steps: [
+          { action: 'Set authentication timeout', s: 'ssh server authentication-timeout 60', cx: 'ssh server timeout 60', hpe: 'ssh server authentication-timeout 60' },
+          { action: 'View SSH server status', s: 'display ssh server status', cx: 'show ssh server', hpe: 'display ssh server status' },
+          { action: 'View active SSH sessions', s: 'display ssh server session', cx: 'show ssh server sessions', hpe: 'display ssh server session' },
+          { action: 'Disconnect an SSH session', s: 'free ssh user-id 1', cx: 'no ssh server session 1', hpe: 'free ssh user-id 1' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'telnet', icon: '\u2190', section: 'Management Access', title: 'Telnet Configuration',
+    desc: 'Configure Telnet access (SSH preferred for production).',
+    callout: { type: 'danger', text: 'Telnet sends passwords in plaintext. Use SSH for production environments. Telnet is only appropriate in isolated lab networks.' },
+    subtopics: [
+      {
+        id: 'telnet-enable', heading: 'Enabling Telnet', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Enable Telnet server', s: 'telnet server enable', cx: 'telnet-server', hpe: 'telnet server enable', note: 'AOS-S/HPE: "telnet server enable". AOS-CX: enable with "telnet-server" command in config.' },
+          { action: 'Create local user', s: 'local-user telnetuser class manage', cx: null, hpe: 'local-user telnetuser class manage' },
+          { action: 'Set password', s: 'password simple LabPass123', cx: null, hpe: 'password simple LabPass123' },
+          { action: 'Set service type', s: 'service-type telnet', cx: null, hpe: 'service-type telnet' },
+          { action: 'Enter VTY lines', s: 'user-interface vty 0 4', cx: null, hpe: 'user-interface vty 0 4' },
+          { action: 'Set authentication mode', s: 'authentication-mode scheme', cx: null, hpe: 'authentication-mode scheme' },
+          { action: 'Allow telnet protocol', s: 'protocol inbound telnet', cx: null, hpe: 'protocol inbound telnet' },
+        ]
+      },
+      {
+        id: 'telnet-disable', heading: 'Disabling Telnet', steps: [
+          { action: 'Disable Telnet server globally', s: 'undo telnet server enable', cx: 'no telnet-server', hpe: 'undo telnet server enable' },
+          { action: 'Or restrict VTY to SSH only (AOS-S/HPE)', s: 'protocol inbound ssh', cx: null, hpe: 'protocol inbound ssh' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'snmp', icon: '\u2316', section: 'Management Access', title: 'SNMP',
+    desc: 'Simple Network Management Protocol — SNMPv2c and SNMPv3 for monitoring and management.',
+    subtopics: [
+      {
+        id: 'snmpv2c', heading: 'SNMPv2c Setup', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Enable SNMP agent', s: 'snmp-agent', cx: 'snmp-server enable', hpe: 'snmp-agent', note: 'Starts the SNMP daemon.' },
+          { action: 'Set RO community string', s: 'snmp-agent community read public', cx: 'snmp-server community public', hpe: 'snmp-agent community read public', note: '"public" is the default. Change in production.' },
+          { action: 'Set RW community string', s: 'snmp-agent community write private', cx: 'snmp-server community private', hpe: 'snmp-agent community write private', note: 'Allows write via SNMP. Use with caution.' },
+          { action: 'Set system contact', s: 'snmp-agent sys-info contact admin@example.com', cx: 'snmp-server contact admin@example.com', hpe: 'snmp-agent sys-info contact admin@example.com' },
+          { action: 'Set system location', s: 'snmp-agent sys-info location DC-R01-U12', cx: 'snmp-server location DC-R01-U12', hpe: 'snmp-agent sys-info location DC-R01-U12' },
+          { action: 'Verify SNMP config', s: 'display snmp-agent sys-info', cx: 'show snmp-server', hpe: 'display snmp-agent sys-info' },
+        ]
+      },
+      {
+        id: 'snmpv3', heading: 'SNMPv3 Setup (Auth + Privacy)', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Enable SNMP agent', s: 'snmp-agent', cx: 'snmp-server enable', hpe: 'snmp-agent' },
+          { action: 'Enable SNMPv3', s: 'snmp-agent sys-info version v3', cx: 'snmp-server v3-only', hpe: 'snmp-agent sys-info version v3', note: 'Restricts SNMP to v3 only. Or use "all" to allow v1/v2c/v3.' },
+          { action: 'Create MIB view (AOS-S/HPE)', s: 'snmp-agent mib-view included ReadView iso', cx: null, hpe: 'snmp-agent mib-view included ReadView iso', note: 'Defines which OID tree the group can access. "iso" = full tree.' },
+          { action: 'Create SNMPv3 group', s: 'snmp-agent group v3 SNMPv3Group privacy read-view ReadView', cx: 'snmp-server group SNMPv3Group v3 priv', hpe: 'snmp-agent group v3 SNMPv3Group privacy read-view ReadView', note: 'AOS-S/HPE: "privacy" = auth + encryption. Options: noauth, authentication, privacy.' },
+          { action: 'Create SNMPv3 user', s: 'snmp-agent usm-user v3 snmpadmin SNMPv3Group simple authentication-mode sha AuthPass123 privacy-mode aes128 PrivPass456', cx: 'snmp-server user snmpadmin SNMPv3Group v3 auth sha AuthPass123 priv aes PrivPass456', hpe: 'snmp-agent usm-user v3 snmpadmin SNMPv3Group simple authentication-mode sha AuthPass123 privacy-mode aes128 PrivPass456', note: 'AOS-S/HPE: usm-user with "simple" (then auth/privacy params). AOS-CX: combined "snmp-server user" command. Use SHA for auth, AES128 for encryption.' },
+          { action: 'Set system contact and location (if not already)', s: 'snmp-agent sys-info contact admin@example.com\nsnmp-agent sys-info location DC-R01-U12', cx: 'snmp-server contact admin@example.com\nsnmp-server location DC-R01-U12', hpe: 'snmp-agent sys-info contact admin@example.com\nsnmp-agent sys-info location DC-R01-U12' },
+          { action: 'Verify SNMPv3 config', s: 'display snmp-agent sys-info\n display snmp-agent group\n display snmp-agent usm-user', cx: 'show snmp-server\nshow snmp-server group\nshow snmp-server user', hpe: 'display snmp-agent sys-info\n display snmp-agent group\n display snmp-agent usm-user' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'port-security', icon: '\u26BF', section: 'Security', title: 'Port Security',
+    desc: 'Restrict which devices can connect to switch ports based on MAC address.',
+    subtopics: [
+      {
+        id: 'portsec-basic', heading: 'Basic Port Security', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Enter interface view', s: 'interface gigabitethernet 1/0/10', cx: 'interface 1/1/10', hpe: 'interface gigabitethernet 1/0/10' },
+          { action: 'Enable port security', s: 'port-security enable', cx: 'switchport port-security', hpe: 'port-security enable' },
+          { action: 'Set max MAC addresses', s: 'port-security max-mac-count 2', cx: 'switchport port-security maximum 2', hpe: 'port-security max-mac-count 2', note: 'Only 2 unique MACs allowed on this port.' },
+          { action: 'Set violation action', s: 'port-security intrusion-mode disableport', cx: 'switchport port-security violation shutdown', hpe: 'port-security intrusion-mode disableport', note: 'disableport/shutdown: shut port. blockmac/restrict: block traffic. disableport-temporarily: temporary shutdown.' },
+          { action: 'View port security status', s: 'display port-security interface gigabitethernet 1/0/10', cx: 'show port-security interface 1/1/10', hpe: 'display port-security interface gigabitethernet 1/0/10' },
+        ]
+      },
+      {
+        id: 'portsec-sticky', heading: 'Sticky MAC (Auto-Learn)', steps: [
+          { action: 'Enable sticky MAC learning', s: 'port-security mac-address sticky', cx: 'switchport port-security mac-address sticky', hpe: 'port-security mac-address sticky' },
+          { action: 'Manually add a secure MAC', s: 'port-security mac-address 0000-5e00-0101 vlan 10', cx: 'switchport port-security mac-address 0000.5e00.0101 vlan 10', hpe: 'port-security mac-address 0000-5e00-0101 vlan 10', note: 'MAC format: AOS-S/HPE use xxxx-xxxx-xxxx. AOS-CX uses xxxx.xxxx.xxxx.' },
+          { action: 'View secure MACs', s: 'display port-security mac-address', cx: 'show port-security address', hpe: 'display port-security mac-address' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'stp', icon: '\u21CC', section: 'Redundancy', title: 'Spanning Tree (STP)',
+    desc: 'Prevent loops in redundant switch topologies.',
+    subtopics: [
+      {
+        id: 'stp-config', heading: 'STP Configuration', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Enable STP globally', s: 'stp enable', cx: 'spanning-tree', hpe: 'stp enable', note: 'Usually enabled by default.' },
+          { action: 'Set STP mode', s: 'stp mode rstp', cx: 'spanning-tree mode rpvst', hpe: 'stp mode rstp', note: 'RSTP/MSTP recommended. AOS-CX: rpvst (per-VLAN RSTP) or mstp.' },
+          { action: 'Set switch priority (root bridge)', s: 'stp priority 4096', cx: 'spanning-tree priority 0', hpe: 'stp priority 4096', note: 'Lower = more likely root. AOS-S/HPE: multiples of 4096. AOS-CX: 0-15.' },
+          { action: 'Enter interface view', s: 'interface gigabitethernet 1/0/24', cx: 'interface 1/1/24', hpe: 'interface gigabitethernet 1/0/24' },
+          { action: 'Set port as edge port', s: 'stp edged-port', cx: 'spanning-tree port-type edge', hpe: 'stp edged-port', note: 'For end-device ports. Skips listening/learning.' },
+          { action: 'Enable BPDU guard', s: 'stp bpdu-protection', cx: 'spanning-tree bpdu-guard', hpe: 'stp bpdu-protection' },
+          { action: 'View STP status', s: 'display stp brief', cx: 'show spanning-tree brief', hpe: 'display stp brief' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'lldp', icon: '\u21C6', section: 'Management Access', title: 'LLDP',
+    desc: 'Link Layer Discovery Protocol — discover neighboring devices.',
+    subtopics: [
+      {
+        id: 'lldp-config', heading: 'Enabling LLDP', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Enable LLDP globally', s: 'lldp enable', cx: 'lldp enable', hpe: 'lldp enable', note: 'Same on all OS.' },
+          { action: 'Enter interface view', s: 'interface gigabitethernet 1/0/24', cx: 'interface 1/1/24', hpe: 'interface gigabitethernet 1/0/24' },
+          { action: 'Enable LLDP on port', s: 'lldp enable', cx: 'lldp enable', hpe: 'lldp enable', note: 'Must be enabled both globally and per-interface.' },
+          { action: 'View LLDP neighbors', s: 'display lldp neighbor-information list', cx: 'show lldp neighbor-info', hpe: 'display lldp neighbor-information list' },
+          { action: 'View detailed neighbor info', s: 'display lldp neighbor-information interface gigabitethernet 1/0/24', cx: 'show lldp neighbor-info interface 1/1/24', hpe: 'display lldp neighbor-information interface gigabitethernet 1/0/24' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'dhcp-relay', icon: '\u21E2', section: 'Core Configuration', title: 'DHCP Relay',
+    desc: 'Forward DHCP requests from clients to a DHCP server on a different subnet.',
+    subtopics: [
+      {
+        id: 'dhcp-relay-setup', heading: 'DHCP Relay Setup', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Enable DHCP service', s: 'dhcp enable', cx: 'dhcp-server', hpe: 'dhcp enable', note: 'AOS-S/HPE: "dhcp enable". AOS-CX: "dhcp-server".' },
+          { action: 'Enter VLAN interface view', s: 'interface vlan-interface 10', cx: 'interface vlan 10', hpe: 'interface vlan-interface 10' },
+          { action: 'Configure DHCP relay server', s: 'dhcp relay server-address 192.168.100.10', cx: 'ip helper-address 192.168.100.10', hpe: 'dhcp relay server-address 192.168.100.10', note: 'AOS-CX uses "ip helper-address" like Cisco.' },
+          { action: 'Verify relay configuration', s: 'display dhcp relay interface vlan-interface 10', cx: 'show ip helper-address', hpe: 'display dhcp relay interface vlan-interface 10' },
+          { action: 'View relay statistics', s: 'display dhcp relay statistics', cx: 'show dhcp-relay statistics', hpe: 'display dhcp relay statistics' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'acl', icon: '\u26D4', section: 'Security', title: 'Access Control Lists',
+    desc: 'Filter traffic based on source/destination IP, port, and protocol.',
+    subtopics: [
+      {
+        id: 'acl-basic', heading: 'Basic ACL (Source IP Only)', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Create a basic ACL', s: 'acl basic 2000', cx: 'access-list ip 2000', hpe: 'acl basic 2000', note: 'Basic ACLs (2000-2999) filter by source IP only.' },
+          { action: 'Add permit rule', s: 'rule 10 permit source 192.168.10.0 0.0.0.255', cx: '10 permit 192.168.10.0 0.0.0.255', hpe: 'rule 10 permit source 192.168.10.0 0.0.0.255', note: 'Wildcard mask (inverse of subnet mask).' },
+          { action: 'Add deny rule', s: 'rule 20 deny source 192.168.20.0 0.0.0.255', cx: '20 deny 192.168.20.0 0.0.0.255', hpe: 'rule 20 deny source 192.168.20.0 0.0.0.255' },
+          { action: 'Apply ACL to VLAN interface', s: 'interface vlan-interface 10\npacket-filter 2000 inbound', cx: 'interface vlan 10\napply access-list ip 2000 in', hpe: 'interface vlan-interface 10\npacket-filter 2000 inbound', note: 'AOS-S/HPE: "packet-filter". AOS-CX: "apply access-list".' },
+        ]
+      },
+      {
+        id: 'acl-advanced', heading: 'Advanced ACL (Layer 4)', steps: [
+          { action: 'Create advanced ACL', s: 'acl advanced 3000', cx: 'access-list ip 3000', hpe: 'acl advanced 3000' },
+          { action: 'Block SSH to a host', s: 'rule 10 deny tcp destination 192.168.1.100 0 destination-port eq 22', cx: '10 deny tcp any 192.168.1.100/32 eq 22', hpe: 'rule 10 deny tcp destination 192.168.1.100 0 destination-port eq 22' },
+          { action: 'Allow all other traffic', s: 'rule 20 permit ip', cx: '20 permit ip any any', hpe: 'rule 20 permit ip', note: 'Implicit deny at end — this rule is needed to allow all other traffic.' },
+          { action: 'View ACL rules', s: 'display acl 3000', cx: 'show access-list 3000', hpe: 'display acl 3000' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'ntp', icon: '\u23F0', section: 'Management Access', title: 'NTP Configuration',
+    desc: 'Synchronize the switch clock with NTP servers for accurate logging.',
+    subtopics: [
+      {
+        id: 'ntp-setup', heading: 'NTP Setup', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Set NTP server', s: 'ntp-service unicast-server 192.168.1.10', cx: 'ntp server 192.168.1.10', hpe: 'ntp-service unicast-server 192.168.1.10', note: 'AOS-S/HPE: "ntp-service unicast-server". AOS-CX: "ntp server".' },
+          { action: 'Set timezone (UTC+7)', s: 'clock timezone Asia/Jakarta add 7', cx: 'clock timezone asia/jakarta', hpe: 'clock timezone Asia/Jakarta add 7', note: 'AOS-S/HPE: "add|minus &lt;offset&gt;". AOS-CX: uses locale format.' },
+          { action: 'View NTP status', s: 'display ntp-service status', cx: 'show ntp status', hpe: 'display ntp-service status' },
+          { action: 'View NTP associations', s: 'display ntp-service sessions', cx: 'show ntp associations', hpe: 'display ntp-service sessions' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'logging', icon: '\u270E', section: 'Management Access', title: 'Logging & Syslog',
+    desc: 'Configure system logging and remote syslog servers.',
+    subtopics: [
+      {
+        id: 'logging-setup', heading: 'Syslog Setup', steps: [
+          { action: 'Enter configuration mode', s: 'system-view', cx: 'configure terminal', hpe: 'system-view' },
+          { action: 'Enable logging/info-center', s: 'info-center enable', cx: 'logging', hpe: 'info-center enable', note: 'AOS-S/HPE uses "info-center". AOS-CX uses "logging".' },
+          { action: 'Set syslog server', s: 'info-center loghost 192.168.1.50', cx: 'logging 192.168.1.50', hpe: 'info-center loghost 192.168.1.50' },
+          { action: 'Set logging facility', s: 'info-center loghost 192.168.1.50 facility local7', cx: 'logging facility local7', hpe: 'info-center loghost 192.168.1.50 facility local7' },
+          { action: 'Set buffered log size', s: 'info-center logbuffer size 512', cx: 'logging buffer 512', hpe: 'info-center logbuffer size 512' },
+          { action: 'View log buffer / recent logs', s: 'display logbuffer', cx: 'show log', hpe: 'display logbuffer' },
+        ]
+      }
+    ]
+  }
+];
+
+// ── Build Navigation ────────────────────────────────────────
+const nav = document.getElementById('nav');
+const seenSections = new Set();
+
+guides.forEach(g => {
+  if (!seenSections.has(g.section)) {
+    seenSections.add(g.section);
+    const div = document.createElement('div');
+    div.className = 'nav-section';
+    const title = document.createElement('div');
+    title.className = 'nav-section-title';
+    title.textContent = g.section;
+    div.appendChild(title);
+    nav.appendChild(div);
+  }
+
+  const topicBtn = document.createElement('button');
+  topicBtn.className = 'nav-topic';
+  topicBtn.dataset.id = g.id;
+  topicBtn.innerHTML = `<span class="icon">${g.icon}</span> ${g.title}<span class="arrow">\u25B6</span>`;
+  topicBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleTopic(g.id);
+  });
+  nav.appendChild(topicBtn);
+
+  const subsDiv = document.createElement('div');
+  subsDiv.className = 'nav-subtopics';
+  subsDiv.dataset.topic = g.id;
+
+  g.subtopics.forEach(st => {
+    const subBtn = document.createElement('button');
+    subBtn.className = 'nav-subtopic';
+    subBtn.dataset.sub = st.id;
+    subBtn.dataset.parent = g.id;
+    subBtn.textContent = st.heading;
+    subBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      expandSidebar(g.id);
+      selectGuide(g.id, st.id);
+    });
+    subsDiv.appendChild(subBtn);
+  });
+
+  nav.appendChild(subsDiv);
+});
+
+function expandSidebar(id) {
+  document.querySelectorAll('.nav-topic').forEach(b => b.classList.remove('expanded'));
+  document.querySelectorAll('.nav-subtopics').forEach(d => d.style.maxHeight = '0');
+  const topicBtn = document.querySelector(`.nav-topic[data-id="${id}"]`);
+  const subsDiv = document.querySelector(`.nav-subtopics[data-topic="${id}"]`);
+  if (topicBtn) topicBtn.classList.add('expanded');
+  if (subsDiv) subsDiv.style.maxHeight = subsDiv.scrollHeight + 'px';
+  selectTopic(id);
+}
+
+function toggleTopic(id) {
+  const topicBtn = document.querySelector(`.nav-topic[data-id="${id}"]`);
+  const subsDiv = document.querySelector(`.nav-subtopics[data-topic="${id}"]`);
+  const isExpanded = topicBtn.classList.contains('expanded');
+
+  document.querySelectorAll('.nav-topic').forEach(b => b.classList.remove('expanded'));
+  document.querySelectorAll('.nav-subtopics').forEach(d => d.style.maxHeight = '0');
+
+  if (!isExpanded) {
+    topicBtn.classList.add('expanded');
+    subsDiv.style.maxHeight = subsDiv.scrollHeight + 'px';
+  }
+  selectTopic(id);
+  selectGuide(id, guides.find(g => g.id === id).subtopics[0].id);
+}
+
+function selectTopic(id) {
+  document.querySelectorAll('.nav-topic, .nav-subtopic').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`.nav-topic[data-id="${id}"]`);
+  if (btn) btn.classList.add('active');
+}
+
+function selectSubTopic(parentId, subId) {
+  document.querySelectorAll('.nav-subtopic').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`.nav-subtopic[data-parent="${parentId}"][data-sub="${subId}"]`);
+  if (btn) {
+    btn.classList.add('active');
+    const subsDiv = document.querySelector(`.nav-subtopics[data-topic="${parentId}"]`);
+    if (subsDiv) {
+      const topicBtn = document.querySelector(`.nav-topic[data-id="${parentId}"]`);
+      if (topicBtn && !topicBtn.classList.contains('expanded')) {
+        topicBtn.classList.add('expanded');
+        subsDiv.style.maxHeight = subsDiv.scrollHeight + 'px';
+      }
+    }
+  }
+}
+
+// ── Resolve command based on current OS ─────────────────────
+function resolveCmd(step) {
+  const s = step.s, cx = step.cx, hpe = step.hpe;
+  if (currentOS === 'cx' && cx) return { cmd: cx, cls: 'cx', badge: 'AOS-CX' };
+  if (currentOS === 'hpe' && hpe) return { cmd: hpe, cls: 'hpe', badge: 'HPE' };
+  if (currentOS === 's' && s) return { cmd: s, cls: 's', badge: 'AOS-S' };
+  if (currentOS === 'hpe' && s) return { cmd: s, cls: 'hpe', badge: 'HPE' }; // fallback: hpe uses s
+  if (currentOS === 'cx' && s) return { cmd: s, cls: 'cx', badge: 'AOS-CX' }; // fallback: cx uses s
+  return { cmd: s || cx || hpe || '', cls: 's', badge: 'AOS-S' };
+}
+
+function isOSOnly(step) {
+  if (currentOS === 's' && step.s) return false;
+  if (currentOS === 'cx' && step.cx) return false;
+  if (currentOS === 'hpe' && (step.hpe || step.s)) return false;
+  return true;
+}
+
+function getOSOnlyText(step) {
+  if (step.s && !step.cx && !step.hpe) return 'AOS-S / HPE only';
+  if (step.cx && !step.s && !step.hpe) return 'AOS-CX only';
+  if (step.s && step.hpe && !step.cx) return 'AOS-S & HPE only';
+  if (step.cx && !step.s && !step.hpe) return 'AOS-CX only';
+  return '';
+}
+
+// ── Select Guide ────────────────────────────────────────────
+function selectGuide(id, subId) {
+  const guide = guides.find(g => g.id === id);
+  if (!guide) return;
+
+  const st = subId ? guide.subtopics.find(s => s.id === subId) : guide.subtopics[0];
+  if (!st) return;
+
+  history.pushState(null, '', `#${id}/${st.id}`);
+
+  document.getElementById('empty').classList.add('hidden');
+  const content = document.getElementById('content');
+  content.classList.remove('hidden');
+
+  let html = `<div class="guide-header"><h2>${guide.icon} ${guide.title}</h2><p class="desc">${guide.desc}</p></div>`;
+  if (guide.callout) html += `<div class="callout ${guide.callout.type || 'info'}">${guide.callout.text}</div>`;
+
+  html += `<div class="subtopic" id="sub-${st.id}"><div class="subtopic-heading">${st.heading}</div>`;
+
+  st.steps.forEach((s, i) => {
+    if (isOSOnly(s)) {
+      html += `<div class="step" style="opacity:0.5">
+        <div class="step-header">
+          <div class="step-num">${i + 1}</div>
+          <div class="step-info">
+            <div class="step-action">${s.action} <em>(${getOSOnlyText(s)})</em></div>
+            ${s.note ? `<div class="step-note">${s.note}</div>` : ''}
+          </div>
+        </div>
+        <div class="step-cmd">
+          <span class="prompt">[Switch] $</span>
+          <code class="s" style="opacity:0.5">${escapeHTML(s.s || s.cx || s.hpe || 'N/A')}</code>
+          <span class="os-badge s">${s.s ? 'AOS-S' : s.cx ? 'AOS-CX' : 'HPE'}</span>
+          <button class="copy-btn" data-cmd="${escapeAttr(s.s || s.cx || s.hpe || '')}">Copy</button>
+        </div>
+      </div>`;
+    } else {
+      const r = resolveCmd(s);
+      html += buildStep(i, s, r.cmd, r.cls, r.badge);
+    }
+  });
+
+  html += `</div>`;
+  content.innerHTML = html;
+
+  content.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      navigator.clipboard.writeText(btn.dataset.cmd).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+      });
+    });
+  });
+
+  selectSubTopic(id, st.id);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function buildStep(i, s, cmd, cls, badge) {
+  return `
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">${i + 1}</div>
+        <div class="step-info">
+          <div class="step-action">${s.action}</div>
+          ${s.note ? `<div class="step-note">${s.note}</div>` : ''}
+        </div>
+      </div>
+      <div class="step-cmd">
+        <span class="prompt">[Switch] $</span>
+        <code class="${cls}">${escapeHTML(cmd)}</code>
+        ${badge ? `<span class="os-badge ${badge === 'AOS-S' ? 's' : badge === 'AOS-CX' ? 'cx' : 'hpe'}">${badge}</span>` : ''}
+        <button class="copy-btn" data-cmd="${escapeAttr(cmd)}">Copy</button>
+      </div>
+    </div>`;
+}
+
+function escapeHTML(s) { return (s||'').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function escapeAttr(s) { return (s||'').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+// ── OS Toggle ───────────────────────────────────────────────
+document.querySelectorAll('.os-option').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.os-option').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentOS = btn.dataset.os;
+
+    document.querySelectorAll('.step-cmd').forEach(cmdEl => {
+      const stepEl = cmdEl.closest('.step');
+      if (!stepEl) return;
+
+      const subtopicEl = stepEl.closest('.subtopic');
+      if (!subtopicEl) return;
+
+      const subtopicId = subtopicEl.id.replace('sub-', '');
+      const activeTopicBtn = document.querySelector('.nav-topic.active');
+      if (!activeTopicBtn) return;
+      const guideId = activeTopicBtn.dataset.id;
+      const guide = guides.find(g => g.id === guideId);
+      if (!guide) return;
+
+      const subtopic = guide.subtopics.find(st => st.id === subtopicId);
+      if (!subtopic) return;
+
+      const stepNum = parseInt(stepEl.querySelector('.step-num').textContent) - 1;
+      const step = subtopic.steps[stepNum];
+      if (!step) return;
+
+      if (isOSOnly(step)) return;
+
+      const r = resolveCmd(step);
+      const code = cmdEl.querySelector('code');
+      const badge = cmdEl.querySelector('.os-badge');
+      const copyBtn = cmdEl.querySelector('.copy-btn');
+
+      code.className = r.cls;
+      code.textContent = r.cmd;
+      code.style.opacity = '';
+      if (badge) { badge.textContent = r.badge; badge.className = 'os-badge ' + (r.badge === 'AOS-S' ? 's' : r.badge === 'AOS-CX' ? 'cx' : 'hpe'); }
+      if (copyBtn) copyBtn.dataset.cmd = r.cmd;
+      stepEl.style.opacity = '';
+    });
+  });
+});
+
+// ── Search ──────────────────────────────────────────────────
+const searchInput = document.getElementById('search');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  if (!q) {
+    document.querySelectorAll('.nav-topic, .nav-section').forEach(b => b.classList.remove('hidden'));
+    return;
+  }
+  document.querySelectorAll('.nav-section').forEach(s => s.classList.add('hidden'));
+  document.querySelectorAll('.nav-topic').forEach(b => {
+    const guide = guides.find(g => g.id === b.dataset.id);
+    if (!guide) return;
+    const allText = guide.title + ' ' + guide.desc + ' ' +
+      guide.subtopics.flatMap(st => st.steps).map(s => s.action + ' ' + (s.s||'') + ' ' + (s.cx||'') + ' ' + (s.hpe||'') + ' ' + (s.note||'')).join(' ');
+    if (allText.toLowerCase().includes(q)) {
+      b.classList.remove('hidden');
+      const prev = b.previousElementSibling;
+      if (prev && prev.classList.contains('nav-section')) prev.classList.remove('hidden');
+    } else {
+      b.classList.add('hidden');
+    }
+  });
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== searchInput) { e.preventDefault(); searchInput.focus(); }
+  if (e.key === 'Escape') searchInput.blur();
+});
+
+// ── Initial Load ────────────────────────────────────────────
+const hash = window.location.hash.slice(1);
+if (hash) {
+  const parts = hash.split('/');
+  const topicId = parts[0], subId = parts[1];
+  if (topicId && guides.find(g => g.id === topicId)) {
+    expandSidebar(topicId);
+    selectGuide(topicId, subId);
+  }
+}
+
+window.addEventListener('popstate', () => {
+  const h = window.location.hash.slice(1);
+  if (h) {
+    const parts = h.split('/');
+    const topicId = parts[0], subId = parts[1];
+    if (topicId && guides.find(g => g.id === topicId)) {
+      expandSidebar(topicId);
+      selectGuide(topicId, subId);
+    }
+  }
+});
+</script>
+</body>
+</html>
